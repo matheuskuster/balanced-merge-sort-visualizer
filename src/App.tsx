@@ -122,7 +122,7 @@ const BalancedMergeSort = () => {
     <div className="w-full max-w-4xl mx-auto p-4">
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle>Ordenação por Intercalação Balanceada</CardTitle>
+          <CardTitle>Intercalação balanceada: Múltiplos caminhos</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
