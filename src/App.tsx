@@ -1,24 +1,34 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Slider } from '@/components/ui/slider';
 
-const BalancedMergeSort = () => {
-  // Estado inicial dos arquivos
-  const initialFiles = [
-    [1, 5, 9, 13],
-    [2, 6, 10, 14],
-    [3, 7, 11, 15],
-    [4, 8, 12, 16]
-  ];
+const MultiwayMerge = () => {
+  const [numArrays, setNumArrays] = useState(4);
+  const [arraySize, setArraySize] = useState(4);
+  
+  const generateInitialArrays = useCallback(() => {
+    const arrays = [];
+    let currentNum = 1;
+    
+    for (let i = 0; i < numArrays; i++) {
+      const array = [];
+      for (let j = 0; j < arraySize; j++) {
+        array.push(currentNum);
+        currentNum++;
+      }
+      arrays.push(array.sort((a, b) => a - b));
+    }
+    return arrays;
+  }, [numArrays, arraySize]);
 
-  // Estados
-  const [files, setFiles] = useState(initialFiles);
+  const [files, setFiles] = useState(() => generateInitialArrays());
   const [output, setOutput] = useState<number[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [currentMin, setCurrentMin] = useState<number | null>(null);
   const [activeFileIndex, setActiveFileIndex] = useState<number | null>(null);
+  const [speed, setSpeed] = useState(500);
   
-  // Encontra o menor valor entre os arquivos ativos
-  const findSmallestValue = useCallback((currentFiles: typeof files) => {
+  const findSmallestValue = useCallback((currentFiles: number[][]) => {
     let smallestValue = Infinity;
     let smallestIndex = -1;
 
@@ -32,7 +42,6 @@ const BalancedMergeSort = () => {
     return { smallestValue, smallestIndex };
   }, []);
 
-  // Processo principal de intercalação
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
@@ -48,48 +57,42 @@ const BalancedMergeSort = () => {
         return;
       }
 
-      // Primeiro, destaca os números sendo comparados
       const firstValues = files.map((file, index) => ({
         value: file.length > 0 ? file[0] : Infinity,
         index
       })).filter(item => item.value !== Infinity);
 
-      // Simula o processo de comparação
       for (let i = 0; i < firstValues.length; i++) {
         await new Promise(resolve => {
-          timeoutId = setTimeout(resolve, 500);
+          timeoutId = setTimeout(resolve, speed);
         });
         setActiveFileIndex(firstValues[i].index);
         setCurrentMin(firstValues[i].value);
       }
 
-      // Encontra o menor valor
       const { smallestValue, smallestIndex } = findSmallestValue(files);
       
       if (smallestIndex !== -1) {
         await new Promise(resolve => {
-          timeoutId = setTimeout(resolve, 500);
+          timeoutId = setTimeout(resolve, speed);
         });
 
-        // Atualiza os arquivos removendo o menor valor
         const newFiles = files.map((file, index) => 
           index === smallestIndex ? file.slice(1) : file
         );
         
-        // Atualiza o output adicionando o menor valor
         const newOutput = [...output, smallestValue];
         
         setFiles(newFiles);
         setOutput(newOutput);
       }
 
-      // Limpa os destaques antes do próximo passo
       await new Promise<void>(resolve => {
         timeoutId = setTimeout(() => {
           setCurrentMin(null);
           setActiveFileIndex(null);
           resolve();
-        }, 500);
+        }, speed);
       });
     };
 
@@ -102,34 +105,77 @@ const BalancedMergeSort = () => {
         clearTimeout(timeoutId);
       }
     };
-  }, [files, output, isRunning, findSmallestValue]);
+  }, [files, output, isRunning, findSmallestValue, speed]);
 
-  // Reinicia a visualização
-  const handleReset = () => {
-    setFiles(initialFiles);
+  const handleReset = useCallback(() => {
+    setFiles(generateInitialArrays());
     setOutput([]);
     setIsRunning(false);
     setCurrentMin(null);
     setActiveFileIndex(null);
-  };
+  }, [generateInitialArrays]);
 
-  // Inicia/Pausa a visualização
-  const handleToggleRunning = () => {
-    setIsRunning(!isRunning);
-  };
+  const handleConfigUpdate = useCallback(() => {
+    handleReset();
+  }, [handleReset]);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4">
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle>Intercalação balanceada: Múltiplos caminhos</CardTitle>
+          <CardTitle>Visualização de Intercalação Múltipla</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Controles */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Número de Arquivos (2-8)
+                </label>
+                <input
+                  type="number"
+                  min="2"
+                  max="8"
+                  value={numArrays}
+                  onChange={(e) => setNumArrays(Math.min(8, Math.max(2, parseInt(e.target.value) || 2)))}
+                  className="w-full p-2 border rounded"
+                  disabled={isRunning}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Tamanho dos Arquivos (2-8)
+                </label>
+                <input
+                  type="number"
+                  min="2"
+                  max="8"
+                  value={arraySize}
+                  onChange={(e) => setArraySize(Math.min(8, Math.max(2, parseInt(e.target.value) || 2)))}
+                  className="w-full p-2 border rounded"
+                  disabled={isRunning}
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Velocidade da Animação (ms): {speed}
+              </label>
+              <Slider
+                value={[speed]}
+                onValueChange={(value) => setSpeed(value[0])}
+                min={100}
+                max={1000}
+                step={100}
+                className="w-full"
+                disabled={isRunning}
+              />
+            </div>
+
             <div className="flex gap-2">
               <button 
-                onClick={handleToggleRunning}
+                onClick={() => setIsRunning(!isRunning)}
                 className={`px-4 py-2 rounded ${
                   isRunning 
                     ? 'bg-red-500 hover:bg-red-600' 
@@ -144,9 +190,15 @@ const BalancedMergeSort = () => {
               >
                 Reiniciar
               </button>
+              <button 
+                onClick={handleConfigUpdate}
+                className="px-4 py-2 rounded bg-green-500 hover:bg-green-600 text-white"
+                disabled={isRunning}
+              >
+                Aplicar Configuração
+              </button>
             </div>
 
-            {/* Arquivos de entrada */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {files.map((file, index) => (
                 <div 
@@ -179,7 +231,6 @@ const BalancedMergeSort = () => {
               ))}
             </div>
 
-            {/* Arquivo de saída */}
             <div className="mt-8 p-4 border-2 border-blue-500 rounded-lg">
               <div className="font-bold mb-2">Arquivo de Saída</div>
               <div className="text-lg">
@@ -229,4 +280,4 @@ const Legend = () => (
   </div>
 );
 
-export default BalancedMergeSort;
+export default MultiwayMerge;
